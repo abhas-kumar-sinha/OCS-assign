@@ -74,7 +74,7 @@ Example request:
 
 ### 6. Deployed
 The application is deployed on vercel.
-live link 
+live link - https://ocs-assign.vercel.app/
 
 ## Issues Faced and Solutions
 
