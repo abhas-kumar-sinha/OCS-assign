@@ -1,13 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { LogIn, KeyRound } from "lucide-react";
-import { supabase } from "@/lib/supabase";
-import bcrypt from "bcryptjs";
+import crypto from "crypto";
 
 interface SignInFormProps {
   onSignIn: () => void;
@@ -20,28 +19,31 @@ export function SignInForm({ onSignIn, onSignUpClick }: SignInFormProps) {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const HandleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setIsLoading(true);
 
-    try {
-      const { data, error } = await supabase
-        .from("users")
-        .select()
-        .eq("userid", username)
-        .single();
+    const password_hash = crypto.createHash('md5').update(password).digest('hex'); // Hash the password
 
-      if (error) throw error;
-      
-      if (data) {
-        const isValidPassword = await bcrypt.compare(password, data.password_hash);
-        if (isValidPassword) {
-          onSignIn();
-          return;
-        }
+    const response = await fetch('/api/7f83d9-protected-endpoint', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Request-Type': 'login',
+      },
+      body: JSON.stringify({ username, password_hash }), // Send the username, hashed in the request body
+    });
+
+    try {
+
+      if (response.status === 200) {
+
+        const data = await response.json();
+        localStorage.setItem('token', data.token);
+        onSignIn();
       }
-      
+
       setError("Invalid credentials");
     } catch (err) {
       setError("Invalid credentials");
@@ -63,7 +65,7 @@ export function SignInForm({ onSignIn, onSignUpClick }: SignInFormProps) {
           </p>
         </div>
       </CardHeader>
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={HandleSubmit}>
         <CardContent className="space-y-4">
           {error && (
             <div className="text-sm text-destructive text-center">{error}</div>

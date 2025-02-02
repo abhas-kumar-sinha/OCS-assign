@@ -11,22 +11,49 @@ import {
 } from "@/components/ui/table";
 import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { supabase } from "@/lib/supabase";
-import type { Database } from "@/types/supabase";
-
-type User = Database["public"]["Tables"]["users"]["Row"];
 
 interface UserTableProps {
   onSignOut: () => void;
+}
+
+interface User {
+  userid: string;
+  password_hash: string;
+  role: string;
 }
 
 export function UserTable({ onSignOut }: UserTableProps) {
   const [users, setUsers] = useState<User[]>([]);
 
   useEffect(() => {
+    const token = localStorage.getItem('token') ?? '';
     const fetchUsers = async () => {
-      const { data } = await supabase.from("users").select();
-      if (data) setUsers(data);
+      try {
+        const response = await fetch('/api/3j54K1-protected-endpoint', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'token': token,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch data');
+        }
+
+        const data = await response.json();
+
+        // Check if the data is an array or a single object
+        if (Array.isArray(data.data)) {
+          setUsers(data.data);
+        } else if (data.data) {
+          setUsers([data.data]);
+        } else {
+          console.error('Invalid data format');
+        }
+      } catch (error) {
+        console.error('Error fetching users:', error);
+      }
     };
 
     fetchUsers();
@@ -51,7 +78,7 @@ export function UserTable({ onSignOut }: UserTableProps) {
           </TableHeader>
           <TableBody>
             {users.map((user) => (
-              <TableRow key={user.id}>
+              <TableRow key={user.userid}>
                 <TableCell className="font-medium">{user.userid}</TableCell>
                 <TableCell className="font-mono text-sm">
                   {user.password_hash}

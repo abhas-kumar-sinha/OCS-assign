@@ -7,7 +7,7 @@ import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card"
 import { Label } from "@/components/ui/label";
 import { UserPlus, KeyRound } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import bcrypt from "bcryptjs";
+import crypto from "crypto";
 
 interface SignUpFormProps {
   onSignUp: () => void;
@@ -25,36 +25,26 @@ export function SignUpForm({ onSignUp, onSignInClick }: SignUpFormProps) {
     setError("");
     setIsLoading(true);
 
-    try {
-      // Check if user already exists
-      const { data: existingUser } = await supabase
-        .from("users")
-        .select()
-        .eq("userid", username)
-        .single();
+    const password_hash = crypto.createHash('md5').update(password).digest('hex'); // Hash the password
 
-      if (existingUser) {
-        setError("Username already exists");
-        return;
+    const response = await fetch('/api/7f83d9-protected-endpoint', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Request-Type': 'signup',
+      },
+      body: JSON.stringify({ username, password_hash }), // Send the username, hashed in the request body
+    });
+
+    try {
+      if (response.status === 200) {
+
+        const data = await response.json();
+        localStorage.setItem('token', data.token);
+        onSignUp();
       }
 
-      // Hash password
-      const salt = await bcrypt.genSalt(10);
-      const hashedPassword = await bcrypt.hash(password, salt);
-
-      // Create new user
-      const { error: insertError } = await supabase
-        .from("users")
-        .insert([
-          {
-            userid: username,
-            password_hash: hashedPassword,
-            role: "user"
-          }
-        ]);
-
-      if (insertError) throw insertError;
-      onSignUp();
+      setError("Failed to create account");
     } catch (err) {
       setError("Failed to create account");
     } finally {
